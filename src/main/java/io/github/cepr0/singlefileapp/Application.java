@@ -19,9 +19,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -47,6 +49,7 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 @SpringBootApplication
 @RestController
 @Validated
+@ControllerAdvice
 @EnableJpaRepositories(considerNestedRepositories = true)
 public class Application extends ResponseEntityExceptionHandler {
 
@@ -132,8 +135,25 @@ public class Application extends ResponseEntityExceptionHandler {
 	@Override
 	protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest req) {
 		List<Error> errors = ex.getBindingResult().getAllErrors().stream().map(Error::of).collect(toList());
-		ErrorMessage errorMessage = ErrorMessage.of(status.value(), "Validation error!", null, ((ServletWebRequest) req).getRequest().getServletPath(), errors);
+		String error = "Validation error!";
+		ErrorMessage errorMessage = ErrorMessage.of(status.value(), error, null, ((ServletWebRequest) req).getRequest().getServletPath(), errors);
+		log.warn(error);
 		return new ResponseEntity<>(errorMessage, headers, status);
+	}
+
+	/**
+	 * Custom 'HttpRequestMethodNotSupportedException' handler with custom {@link ErrorMessage}
+	 */
+	@Override
+	protected ResponseEntity<Object> handleHttpRequestMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpHeaders headers, HttpStatus status, WebRequest req) {
+		ResponseEntity<Object> response = super.handleHttpRequestMethodNotSupported(ex, headers, status, req);
+		HttpHeaders updatedHeaders = response.getHeaders();
+		String method = ex.getMethod();
+		String[] supportedMethods = ex.getSupportedMethods();
+		String error = String.format("Requested method '%s' not supported! Allowed methods: '%s'", method, StringUtils.arrayToCommaDelimitedString(supportedMethods));
+		String path = ((ServletWebRequest) req).getRequest().getServletPath();
+		ErrorMessage errorMessage = ErrorMessage.of(status.value(), error, ex.getMessage(), path, null);
+		return new ResponseEntity<>(errorMessage, updatedHeaders, status);
 	}
 
 	/**
@@ -215,7 +235,7 @@ public class Application extends ResponseEntityExceptionHandler {
 	 *   "message": "Model with requested id was not found!",
 	 *   "path": "/models/4"
 	 * }
-	 *	</pre>
+	 * </pre>
 	 */
 	@JsonInclude(NON_EMPTY)
 	@JsonPropertyOrder({"timestamp", "status", "error", "message", "path", "errors"})

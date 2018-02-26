@@ -11,6 +11,7 @@ It supports:
 - Transactional service
 - CRUD operations
 - Exception handling
+- Separate logging
 
 The project can serve as an illustrative example for learning purposes and be useful as a basis for other projects.
 

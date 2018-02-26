@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>
+
+    <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <!--Separate logging for data info (transactions and sql data)-->
+
+    <property name="DB_LOG_FILE_NAME" value="special"/>
+    <appender name="DB_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} [%-10.10thread] %-5level %30.30logger{29}:%-4line %msg%n</pattern>
+            <charset>utf8</charset>
+        </encoder>
+        <file>log/${DB_LOG_FILE_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${DB_LOG_FILE_NAME}-%i.log</fileNamePattern>
+        </rollingPolicy>
+        <triggeringPolicy
+                class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>10MB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <logger name="org.springframework.orm.jpa" level="debug">
+        <!--additivity="false"-->
+        <appender-ref ref="DB_LOG_FILE"/>
+    </logger>
+
+    <logger name="jdbc.sqlonly" level="info">
+        <appender-ref ref="DB_LOG_FILE"/>
+    </logger>
+
+    <logger name="jdbc.resultsettable" level="info">
+        <appender-ref ref="DB_LOG_FILE"/>
+    </logger>
+
+    <!---->
+
+    <root level="INFO">
+        <appender-ref ref="FILE" />
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

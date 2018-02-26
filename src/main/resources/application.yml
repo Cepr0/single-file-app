@@ -38,3 +38,4 @@ logging:
     io:
       github:
         cepr0: debug
+  file: log/app.log
